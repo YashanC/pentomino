@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pentominoes Game</title>
+    <style>
+        body { margin: 0; display: flex; align-items: center;}
+        canvas { border: 1px solid black; cursor: grab; }
+        button { padding: 10px; margin: 20px; border: none; }
+    </style>
+</head>
+<body>
+    <div>
+        <button id="newShapeBtn">Generate Shape</button>
+        <button id="solutionBtn">Show Solution</button>
+        <button id="hintBtn">Get Hint</button>
+        <p id="nPieces"></p>
+        <p id="usedPieces"></p>
+    </div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.158.0/build/three.module.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,1000);
+        camera.position.set(1,1,9);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth,window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        const controls = new OrbitControls(camera,renderer.domElement);
+
+        const shapeGroup = new THREE.Group();
+        scene.add(shapeGroup);
+        let currentSolution = [];
+
+        const colours = [0xff9999, 0x99ff99, 0xffff99, 0x9999ff, 0xcc99ff, 0xffcc99, 0x99ffff, 0xff99ff, 0xccff99, 0xffcccc, 0x99cccc, 0xe6ccff];
+        const newShapeBtn = document.getElementById('newShapeBtn');
+        const solutionBtn = document.getElementById('solutionBtn');
+        const hintBtn = document.getElementById('hintBtn');
+        const hintText = document.getElementById('usedPieces');
+        const nPieces = document.getElementById('nPieces');
+        let used = [];
+
+        const light = new THREE.DirectionalLight(0xffffff,1);
+        light.position.set(1,1,1);
+        scene.add(light);
+        const ambientLight = new THREE.AmbientLight(0x404040,2.0);
+        scene.add(ambientLight);
+        scene.background = new THREE.Color(0xffffff);
+
+        function renderSolution(solution, showSolution = false) {
+            shapeGroup.clear();
+            used = [];
+            let pnum = solution.length;
+            nPieces.innerText = "Number of Pieces: " + pnum.toString();
+            hintText.innerText = "";
+            solution.forEach((pentomino,index) => {
+                used.push(pentomino.piece);
+                const colour = showSolution ? colours[index % colours.length] : 0xff0000;
+                const coords = pentomino.coords;
+                const material = new THREE.MeshBasicMaterial({ color: colour });
+
+                coords.forEach(([x,y,z]) => {
+                    const geometry = new THREE.BoxGeometry(1,1,1);
+                    const cube = new THREE.Mesh(geometry, material);
+                    cube.position.set(x,y,z);
+                    shapeGroup.add(cube);
+
+                    const edges = new THREE.EdgesGeometry(geometry);
+                    const line = new THREE.LineSegments(
+                        edges,
+                        new THREE.LineBasicMaterial({ color: 0x000000 }) // Black
+                    );
+                    line.position.set(x, y, z);
+                    shapeGroup.add(line);
+                });
+            });
+        }
+
+        fetch('assets/solutions.json')
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                console.log(data[0]);
+                console.log(data[0][0]);
+                newShapeBtn.addEventListener('click', () => {
+                    const randomIndex = Math.floor(Math.random() * data.length);
+                    currentSolution = data[randomIndex];
+                    renderSolution(currentSolution, false);
+                });
+
+                solutionBtn.addEventListener('click', () => {
+                    if(currentSolution.length > 0) {
+                        renderSolution(currentSolution,true);
+                    }
+                });
+
+                hintBtn.addEventListener('click', () => {
+                    let hintStr = "Pieces Used: ";
+                    for(let i=0;i<used.length-1;i++) {
+                        hintStr = hintStr + used[i] + ", ";
+                    }
+                    hintStr += used[used.length-1];
+                    hintText.innerText = hintStr;
+                });
+
+                const initIndex = Math.floor(Math.random() * data.length);
+                currentSolution = data[initIndex];
+                renderSolution(currentSolution,false);
+            })
+            .catch(error => console.error("Error loading shapes:", error));
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene,camera);
+        }
+        animate();
+
+        window.addEventListener("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth,window.innerHeight);
+        });
+    </script>
+</body>
+</html>
