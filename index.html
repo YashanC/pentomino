@@ -77,7 +77,7 @@
                     const edges = new THREE.EdgesGeometry(geometry);
                     const line = new THREE.LineSegments(
                         edges,
-                        new THREE.LineBasicMaterial({ color: 0x000000 }) // Black
+                        new THREE.LineBasicMaterial({ color: 0x000000 })
                     );
                     line.position.set(x, y, z);
                     shapeGroup.add(line);
@@ -85,7 +85,7 @@
             });
         }
 
-        fetch('assets/solutions.json')
+        fetch('assets/solutions2.json')
             .then(response => response.json())
             .then(data => {
                 console.log(data);
